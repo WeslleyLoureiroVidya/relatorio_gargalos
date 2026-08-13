@@ -46,7 +46,9 @@ params = {
     "$filter": f"createdDate ge {data_filtro}",
     # IMPORTANTE: todo campo usado no $filter também precisa estar no $select,
     # senão a API do Movidesk costuma devolver uma lista vazia silenciosamente.
-    "$select": "subject,service,category,createdDate",
+    # OBS: "service" NÃO existe como campo no TicketApiDto (a API retorna 400).
+    # Os campos válidos usados aqui: subject, category, urgency, createdDate.
+    "$select": "subject,category,urgency,createdDate",
     "$top": "1000"
 }
 
@@ -81,7 +83,7 @@ else:
 # PROCESSAMENTO
 # ============================================================
 categorias = Counter()
-servicos = Counter()
+urgencias = Counter()
 palavras = Counter()
 STOPWORDS = {"de", "a", "o", "que", "e", "do", "da", "em", "um", "para", "é", "com", "não", "uma", "os", "no", "se", "na", "por", "mais", "as", "dos", "como", "mas", "foi", "ao", "ele", "das", "tem", "seu", "sua", "ou", "ser", "quando", "muito", "nos", "já", "está", "eu"}
 
@@ -114,18 +116,18 @@ def limpar_texto(texto):
 
 for t in tickets:
     cat = extrair_texto(t.get("category")) or "Sem Categoria"
-    svc = extrair_texto(t.get("service")) or "Sem Serviço"
+    urg = extrair_texto(t.get("urgency")) or "Sem Urgência"
     sub = t.get("subject", "") or ""
 
     categorias[cat] += 1
-    servicos[svc] += 1
+    urgencias[urg] += 1
 
     for palavra in limpar_texto(sub):
         if palavra not in STOPWORDS and len(palavra) > 3:
             palavras[palavra] += 1
 
 print(f"[DEBUG] Categorias distintas: {len(categorias)}")
-print(f"[DEBUG] Serviços distintos: {len(servicos)}")
+print(f"[DEBUG] Urgências distintas: {len(urgencias)}")
 print(f"[DEBUG] Palavras-chave distintas: {len(palavras)}")
 
 # ============================================================
@@ -145,7 +147,7 @@ html_body = f"""
 <h1>Relatório Semanal de Gargalos ({sete_dias_atras.strftime('%d/%m')} a {hoje.strftime('%d/%m')})</h1>
 <p>Total de tickets processados: <strong>{len(tickets)}</strong></p>
 {criar_tabela("Top Categorias", categorias)}
-{criar_tabela("Top Serviços", servicos)}
+{criar_tabela("Top Urgências", urgencias)}
 {criar_tabela("Palavras-Chave Frequentes (Assuntos)", palavras)}
 """
 
